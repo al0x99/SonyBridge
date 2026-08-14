@@ -209,17 +209,15 @@ std::vector<BluetoothDevice> MacOSBluetoothConnector::getConnectedDevices()
 {
     // create the output vector
     std::vector<BluetoothDevice> res;
-    // loop through the paired devices (also includes non paired devices for some reason)
+    // List every paired device, not just ones macOS reports as connected: [isConnected] returns NO for
+    // headsets connected only for audio/BLE (e.g. Sony ULT WEAR), which hid them from the picker. connect()
+    // opens the RFCOMM link on demand, so a paired-but-"disconnected" device still works.
     for (IOBluetoothDevice* device in [IOBluetoothDevice pairedDevices]) {
-        // check if device is connected
-        if ([device isConnected]) {
-            BluetoothDevice dev;
-            // save the mac address and name
-            dev.mac = [[device addressString] UTF8String];
-            dev.name = [[device name] UTF8String];
-            // add device to the connected devices vector
-            res.push_back(dev);
-        }
+        if (![device addressString]) continue;
+        BluetoothDevice dev;
+        dev.mac = [[device addressString] UTF8String];
+        dev.name = [device name] ? [[device name] UTF8String] : "Unknown Device";
+        res.push_back(dev);
     }
     
     return res;
